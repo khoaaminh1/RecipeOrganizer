@@ -9,8 +9,8 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.util.List;
 import java.util.stream.Collectors;
-import java.awt.Image;
-import javax.swing.ImageIcon;
+
+
 
 public class MainWindow extends JFrame {
     private RecipeManager recipeManager;
@@ -65,19 +65,30 @@ public class MainWindow extends JFrame {
         gbc.insets = new Insets(5, 5, 5, 5);
         gbc.anchor = GridBagConstraints.WEST;
 
-        JLabel idLabel = new JLabel("ITEM ID:");
+        JLabel idLabel = new JLabel(" ITEM ID:");
         idLabel.setForeground(Color.BLACK);
         idField = new JTextField(10);
-        JLabel nameLabel = new JLabel("NAME:");
+        JLabel nameLabel = new JLabel(" NAME:");
         nameLabel.setForeground(Color.BLACK);
         nameField = new JTextField(10);
         JLabel typeLabel = new JLabel("TYPE:");
         typeLabel.setForeground(Color.BLACK);
+
         typeCombo = new JComboBox<>(new String[]{"STARTERS", "MAIN DISH", "DESSERT"});
-        JLabel ingredientLabel = new JLabel("INGRIDIENTS:");
+        typeCombo.setRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
+                JLabel label = (JLabel) super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                if (value instanceof String) {
+                    label.setText(value.toString());
+                }
+                return label;
+            }
+        });
+        JLabel ingredientLabel = new JLabel(" INGRIDIENTS:");
         ingredientLabel.setForeground(Color.BLACK);
         ingredientField = new JTextField(15);
-        JLabel recipeLabel = new JLabel("RECIPE:");
+        JLabel recipeLabel = new JLabel(" RECIPE:");
         recipeLabel.setForeground(Color.BLACK);
         recipeArea = new JTextArea(5, 15);
         JScrollPane recipeScroll = new JScrollPane(recipeArea);
@@ -93,6 +104,12 @@ public class MainWindow extends JFrame {
         deleteButton = new JButton("DELETE RECORD");
         deleteButton.setForeground(buttonTextColor);
 
+        // Thêm border cho các ô text box
+        idField.setBorder(BorderFactory.createLineBorder(Color.GRAY, 2));
+        nameField.setBorder(BorderFactory.createLineBorder(Color.GRAY, 2));
+        ingredientField.setBorder(BorderFactory.createLineBorder(Color.GRAY, 2));
+        recipeArea.setBorder(BorderFactory.createLineBorder(Color.GRAY, 2));
+
         gbc.gridx = 0; gbc.gridy = 0; formPanel.add(idLabel, gbc);
         gbc.gridx = 1; formPanel.add(idField, gbc);
         gbc.gridx = 0; gbc.gridy = 1; formPanel.add(nameLabel, gbc);
@@ -107,15 +124,18 @@ public class MainWindow extends JFrame {
         // Search field
         gbc.gridx = 0; gbc.gridy = 5; formPanel.add(new JLabel("Search:"), gbc);
         searchField = new JTextField(10);
+        searchField.setBorder(BorderFactory.createLineBorder(Color.GRAY, 2));
         gbc.gridx = 1; formPanel.add(searchField, gbc);
         gbc.gridx = 1; gbc.gridy = 6; formPanel.add(searchButton, gbc);
 
-        // Button panel
-        JPanel buttonPanel = new JPanel();
+        // Button panel (căn đều và đẹp)
+        JPanel buttonPanel = new JPanel(new GridLayout(1, 3, 20, 0));
         buttonPanel.add(addButton);
         buttonPanel.add(updateButton);
         buttonPanel.add(deleteButton);
-        gbc.gridx = 1; gbc.gridy = 7; formPanel.add(buttonPanel, gbc);
+        gbc.gridx = 0; gbc.gridy = 7; gbc.gridwidth = 2; gbc.anchor = GridBagConstraints.CENTER;
+        formPanel.add(buttonPanel, gbc);
+        gbc.gridwidth = 1; // reset lại cho các thành phần sau nếu có
 
         // GridBagLayout: căn đều và thêm "đệm" để đẩy các thành phần lên trên khi phóng to
         gbc.gridx = 0; gbc.gridy = 8; gbc.gridwidth = 2; gbc.weighty = 1; gbc.fill = GridBagConstraints.VERTICAL;
@@ -177,33 +197,11 @@ public class MainWindow extends JFrame {
         tableScroll.setPreferredSize(new Dimension(500, 300));
         tableScroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
         tableScroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS);
-        // tableScroll.getViewport().setBackground(new java.awt.Color(245, 245, 245)); // bỏ màu nền cũ
 
-        // Debug kiểm tra resource
-        System.out.println("Resource: " + getClass().getResource("/img/background1.jpg"));
-        // Load ảnh nền (ưu tiên resource, nếu không được thì thử đường dẫn tuyệt đối)
-        Image bgImage = null;
-        try {
-            java.net.URL url = getClass().getResource("/img/background1.jpg");
-            if (url != null) {
-                bgImage = new ImageIcon(url).getImage();
-            } else {
-                // Nếu không tìm thấy resource, thử đường dẫn tuyệt đối (chỉ để test)
-                String absPath = "/Users/tranminhkhoa/eclipse-workspace/RecipeOrganizer/src/img/background1.jpg";
-                System.out.println("Thử load ảnh bằng đường dẫn tuyệt đối: " + absPath);
-                bgImage = new ImageIcon(absPath).getImage();
-            }
-        } catch (Exception e) {
-            System.out.println("Không tìm thấy ảnh nền: " + e.getMessage());
-        }
-        BackgroundPanel bgPanel = new BackgroundPanel(bgImage);
-        bgPanel.setLayout(new BorderLayout());
-        bgPanel.add(tableScroll, BorderLayout.CENTER);
-
-        // Main layout
+        // Main layout (không còn background)
         JPanel mainPanel = new JPanel(new BorderLayout());
         mainPanel.add(formPanel, BorderLayout.WEST);
-        mainPanel.add(bgPanel, BorderLayout.CENTER); // Thay vì add tableScroll trực tiếp
+        mainPanel.add(tableScroll, BorderLayout.CENTER);
         add(mainPanel, BorderLayout.CENTER);
 
         // Button actions
@@ -260,9 +258,18 @@ public class MainWindow extends JFrame {
 
     private void onSearch(ActionEvent e) {
         String keyword = searchField.getText().trim().toLowerCase();
-        List<Recipe> filtered = recipeManager.getRecipes().stream()
+        List<Recipe> filtered;
+        if (keyword.equals("starters") || keyword.equals("main dish") || keyword.equals("dessert")) {
+            // Lọc theo loại món ăn
+            filtered = recipeManager.getRecipes().stream()
+                .filter(r -> r.getType().equalsIgnoreCase(keyword))
+                .collect(Collectors.toList());
+        } else {
+            // Lọc theo tên hoặc nguyên liệu như cũ
+            filtered = recipeManager.getRecipes().stream()
                 .filter(r -> r.getName().toLowerCase().contains(keyword) || r.getIngredients().toLowerCase().contains(keyword))
                 .collect(Collectors.toList());
+        }
         tableModel.setRecipes(filtered);
     }
 
@@ -277,18 +284,6 @@ public class MainWindow extends JFrame {
             recipeArea.setText(r.getRecipe());
         }
     }
-}
+    
 
-class BackgroundPanel extends JPanel {
-    private Image backgroundImage;
-    public BackgroundPanel(Image image) {
-        this.backgroundImage = image;
-    }
-    @Override
-    protected void paintComponent(Graphics g) {
-        super.paintComponent(g);
-        if (backgroundImage != null) {
-            g.drawImage(backgroundImage, 0, 0, getWidth(), getHeight(), this);
-        }
-    }
 }
